@@ -1,0 +1,1 @@
+QuickQual is a dual-window reflex and coordination game combining Flappy Mode and Bounce Mode. Players must multitask between guiding a bird through obstacles and keeping a ball from falling. Scoring is based on survival and accuracy, testing hand–eye coordination, focus, and reaction speed in a fun, competitive way.
