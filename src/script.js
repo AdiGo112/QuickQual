@@ -16,12 +16,16 @@ const menuButtonsContainer = document.getElementById('menuButtons');
 const playerNameInput = document.getElementById('playerNameInput');
 const nameInputContainer = document.getElementById('nameInputContainer');
 const highScoresList = document.getElementById('highScoresList');
+const loadingIndicator = document.getElementById('loading');
+const toggleViewButton = document.getElementById('toggleViewButton');
+const scoreboardView = document.getElementById('scoreboardView');
+const menuView = document.getElementById('menuView');
 
 let score = 0;
 let gameActive = false;
 let isPaused = false;
 let boxAppearTime = 0;
-const GAME_DURATION = 120000; // 2 minutes in milliseconds
+const GAME_DURATION = 90000; // 90 seconds in milliseconds
 let gameStartTime = 0;
 let timeRemaining = GAME_DURATION;
 let pauseStartTime = 0;
@@ -29,11 +33,12 @@ let pauseStartTime = 0;
 // Flappy Bird Game Constants
 const BIRD_WIDTH = 40;
 const BIRD_HEIGHT = 30;
-const BIRD_GRAVITY = 0.2;
-const BIRD_JUMP = -4.2;
-const PIPE_WIDTH = 50;
+const BIRD_GRAVITY = 0.3;
+const BIRD_JUMP = -6.0;
+const PIPE_WIDTH = 100;
 const PIPE_GAP = 250;
-const PIPE_SPEED = 2.2;
+const PIPE_SPEED = 3;
+const PARALLAX_SPEED = 2;
 
 // Flappy Bird Game Variables
 let flappyBird = {
@@ -80,58 +85,238 @@ let ballSpeedMultiplier = 1;
 let consecutiveMisses = 0;
 let ballScoreMultiplier = 1;
 
-function saveHighScore(score) {
+let db; // Firestore instance
+let auth; // Firebase Auth instance
+let userId; // User ID
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Check if Firebase variables are available
+    if (typeof initializeApp !== 'undefined') {
+        const app = initializeApp(firebaseConfig);
+        db = getFirestore(app);
+        auth = getAuth(app);
+        
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                userId = user.uid;
+                loadingIndicator.classList.add('hidden');
+                loadAndDisplayHighScores();
+            } else {
+                try {
+                    if (initialAuthToken) {
+                        await signInWithCustomToken(auth, initialAuthToken);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                } catch (error) {
+                    console.error("Firebase auth failed:", error);
+                    loadingIndicator.classList.add('hidden');
+                }
+            }
+        });
+    } else {
+        console.warn("Firebase is not loaded. High scores will not be saved.");
+        loadingIndicator.classList.add('hidden');
+    }
+});
+
+async function saveHighScore(score) {
+    if (!db || !userId) {
+        console.warn("Firestore not available. Score not saved.");
+        return;
+    }
     const playerName = playerNameInput.value || "Anonymous";
-    const newScore = { name: playerName, score: score };
-    
-    let highScores = JSON.parse(localStorage.getItem('highScores') || '[]');
+    const newScore = { name: playerName, score: score, timestamp: Date.now() };
 
-    highScores.push(newScore);
-    highScores.sort((a, b) => b.score - a.score); // Sort descending
-    highScores = highScores.slice(0, 10); // Keep only the top 10
-
-    localStorage.setItem('highScores', JSON.stringify(highScores));
-    
-    nameInputContainer.classList.add('hidden');
-    displayHighScores(highScores);
+    try {
+        const highScoresCollection = collection(db, `artifacts/${appId}/public/data/highScores`);
+        await addDoc(highScoresCollection, newScore);
+        loadAndDisplayHighScores();
+    } catch (e) {
+        console.error("Error adding document: ", e);
+    }
 }
 
-// Listen for real-time high score updates
-function loadAndDisplayHighScores() {
-    const highScores = JSON.parse(localStorage.getItem('highScores') || '[]');
-    highScoresList.innerHTML = highScores.map(s => `<li>${s.name} - ${s.score}</li>`).join('');
+async function loadAndDisplayHighScores() {
+    if (!db) {
+        console.warn("Firestore not available. High scores cannot be loaded.");
+        return;
+    }
+    try {
+        const highScoresCollection = collection(db, `artifacts/${appId}/public/data/highScores`);
+        const q = query(highScoresCollection);
+        const querySnapshot = await getDocs(q);
+
+        let highScores = [];
+        querySnapshot.forEach((doc) => {
+            highScores.push(doc.data());
+        });
+        
+        highScores.sort((a, b) => b.score - a.score);
+        highScores = highScores.slice(0, 10);
+
+        displayHighScores(highScores);
+    } catch (e) {
+        console.error("Error getting documents: ", e);
+    }
 }
 
 function displayHighScores(scores) {
     highScoresList.innerHTML = scores.map(score =>
-        `<li>${score.name} - ${score.score}</li>`
+        `<li class="py-1">${score.name} - ${score.score}</li>`
     ).join('');
 }
 
 // Function to draw the bird
 function drawFlappyBird() {
-    flappyCtx.fillStyle = '#fde047'; // Yellow
-    flappyCtx.fillRect(flappyBird.x - BIRD_WIDTH / 2, flappyBird.y - BIRD_HEIGHT / 2, BIRD_WIDTH, BIRD_HEIGHT);
-    flappyCtx.strokeStyle = '#92400e';
-    flappyCtx.lineWidth = 2;
-    flappyCtx.strokeRect(flappyBird.x - BIRD_WIDTH / 2, flappyBird.y - BIRD_HEIGHT / 2, BIRD_WIDTH, BIRD_HEIGHT);
+    const pixelSize = 3;
+
+     const birdPixels = [
+        "............BBBBBBBBBBBB..........",
+        "............BBBBBBBBBBBB..........",
+        "........BBBBYYYYYYBBWWWWBB........",
+        "........BBBBYYYYYYBBWWWWBB........",
+        "......BBYYYYYYYYBBWWWWWWWWBB......",
+        "......BBYYYYYYYYBBWWWWWWWWBB......",
+        "..BBBBBBBBYYYYYYBBWWWWWWBBWWBB....",
+        "..BBBBBBBBYYYYYYBBWWWWWWBBWWBB....",
+        "BBLLLLLLLLBBYYYYBBWWWWWWBBWWBB....",
+        "BBLLLLLLLLBBYYYYBBWWWWWWBBWWBB....",
+        "BBLLLLLLLLLLBBYYYYBBWWWWWWWWBB....",
+        "BBLLLLLLLLLLBBYYYYBBWWWWWWWWBB....",
+        "BBYYLLLLLLYYBBYYYYYYBBBBBBBBBBBB..",
+        "BBYYLLLLLLYYBBYYYYYYBBBBBBBBBBBB..",
+        "..BBYYYYYYBBYYYYYYBBRRRRRRRRRRRRBB",
+        "..BBYYYYYYBBYYYYYYBBRRRRRRRRRRRRBB",
+        "....BBBBBBOOOOOOBBRRBBBBBBBBBBBB..",
+        "....BBBBBBOOOOOOBBRRBBBBBBBBBBBB..",
+        "....BBOOOOOOOOOOOOBBRRRRRRRRRRBB..",
+        "....BBOOOOOOOOOOOOBBRRRRRRRRRRBB..",
+        "......BBBBOOOOOOOOOOBBBBBBBBBB....",
+        "......BBBBOOOOOOOOOOBBBBBBBBBB....",
+        "..........BBBBBBBBBB..............",
+        "..........BBBBBBBBBB.............."
+    ]; 
+
+
+
+    const colors = {
+        "Y": "#FFEB3B", // main yellow
+        "L": "#FFFFCC", // light yellow
+        "O": "#FFC107", // orange
+        "R": "#F44336", // red
+        "W": "#FFFFFF", // white (eye)
+        "B": "#000000", // black (outline)
+        ".": null       // transparent
+    };
+
+    const rows = birdPixels.length;
+    const cols = birdPixels[0].length;
+    const totalW = cols * pixelSize;
+    const totalH = rows * pixelSize;
+
+    const startX = Math.round(flappyBird.x - totalW / 2);
+    const startY = Math.round(flappyBird.y - totalH / 2);
+
+    flappyCtx.imageSmoothingEnabled = false;
+
+    // ---- First pass: Draw outline (black border) ----
+    for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+            const ch = birdPixels[r][c];
+            if (ch === ".") continue;
+
+            // Check 4-neighbors for transparency
+            const neighbors = [
+                [r - 1, c], [r + 1, c], [r, c - 1], [r, c + 1]
+            ];
+            let isEdge = false;
+            for (const [nr, nc] of neighbors) {
+                if (nr < 0 || nc < 0 || nr >= rows || nc >= cols || birdPixels[nr][nc] === ".") {
+                    isEdge = true;
+                    break;
+                }
+            }
+            if (isEdge) {
+                flappyCtx.fillStyle = "#000000";
+                flappyCtx.fillRect(startX + c * pixelSize, startY + r * pixelSize, pixelSize, pixelSize);
+            }
+        }
+    }
+
+    // ---- Second pass: Draw bird colors ----
+    for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+            const ch = birdPixels[r][c];
+            const color = colors[ch];
+            if (!color) continue;
+            flappyCtx.fillStyle = color;
+            flappyCtx.fillRect(startX + c * pixelSize, startY + r * pixelSize, pixelSize, pixelSize);
+        }
+    }
 }
+
 
 // Function to draw the pipes
 function drawPipes() {
-    flappyCtx.fillStyle = '#16a34a'; // Green
     pipes.forEach(pipe => {
-        // Top pipe
+        // ---- Pipe gradient ----
+        const gradient = flappyCtx.createLinearGradient(pipe.x, 0, pipe.x + PIPE_WIDTH, 0);
+        gradient.addColorStop(0, "#3CB371");   // MediumSeaGreen
+        gradient.addColorStop(0.3, "#32CD32"); // LimeGreen
+        gradient.addColorStop(0.7, "#7CFC00"); // LawnGreen
+        gradient.addColorStop(1, "#2E8B57");   // SeaGreen
+
+        // Pipe fill
+        flappyCtx.fillStyle = gradient;
         flappyCtx.fillRect(pipe.x, 0, PIPE_WIDTH, pipe.top);
-        // Bottom pipe
         flappyCtx.fillRect(pipe.x, pipe.bottom, PIPE_WIDTH, flappyCanvas.height);
+
+        // ---- Strong border ----
+        flappyCtx.strokeStyle = "#006400"; // DarkGreen border
+        flappyCtx.lineWidth = 5;           // thicker border
+
+        // Border around top pipe
+        flappyCtx.strokeRect(pipe.x, 0, PIPE_WIDTH, pipe.top);
+
+        // Border around bottom pipe
+        flappyCtx.strokeRect(pipe.x, pipe.bottom, PIPE_WIDTH, flappyCanvas.height);
+
+        // ---- Pipe caps ----
+        flappyCtx.fillStyle = gradient;
+        flappyCtx.fillRect(pipe.x - 5, pipe.top - 20, PIPE_WIDTH + 10, 20);
+        flappyCtx.fillRect(pipe.x - 5, pipe.bottom, PIPE_WIDTH + 10, 20);
+
+        flappyCtx.strokeStyle = "#004d00"; // darker outline for caps
+        flappyCtx.lineWidth = 5;
+        flappyCtx.strokeRect(pipe.x - 5, pipe.top - 20, PIPE_WIDTH + 10, 20);
+        flappyCtx.strokeRect(pipe.x - 5, pipe.bottom, PIPE_WIDTH + 10, 20);
+
+        // ---- Subtle glare ----
+        let glare = flappyCtx.createLinearGradient(pipe.x, 0, pipe.x + PIPE_WIDTH, 0);
+        glare.addColorStop(0, "rgba(255,255,255,0.2)");
+        glare.addColorStop(0.3, "rgba(255,255,255,0.1)");
+        glare.addColorStop(1, "transparent");
+
+        flappyCtx.fillStyle = glare;
+        flappyCtx.fillRect(pipe.x + 2, 0, PIPE_WIDTH / 4, pipe.top);   // glare top pipe
+        flappyCtx.fillRect(pipe.x + 2, pipe.bottom, PIPE_WIDTH / 4, flappyCanvas.height); // glare bottom pipe
     });
 }
+
+
 
 // Function to update the Flappy Bird game state
 function updateFlappyBird() {
     flappyBird.velocity += BIRD_GRAVITY;
     flappyBird.y += flappyBird.velocity;
+
+    // Parallax scrolling for background
+    const bgElement = document.querySelector('.canvas-container:first-child canvas');
+    if (bgElement) {
+        const bgPosition = parseFloat(bgElement.style.backgroundPositionX || '0');
+        bgElement.style.backgroundPositionX = `${bgPosition - PARALLAX_SPEED}px`;
+    }
 
     pipes.forEach(pipe => {
         pipe.x -= PIPE_SPEED;
@@ -140,11 +325,11 @@ function updateFlappyBird() {
     if (
         pipes.length === 0 ||
         (
-            pipes[pipes.length - 1].x < flappyCanvas.width - (pipes[pipes.length - 1].nextSpacing || 200) && Math.random() < 0.5
+            pipes[pipes.length - 1].x < flappyCanvas.width - (pipes[pipes.length - 1].nextSpacing || 500) && Math.random() < 0.5
         )
     ) {
         const gap = PIPE_GAP;
-        const spacing = 300;
+        const spacing = 500;
         const minHeight = 40;
         const maxHeight = flappyCanvas.height - gap - 40;
         let randomHeight = Math.random() * (maxHeight - minHeight) + minHeight;
@@ -214,7 +399,7 @@ function initBallGame() {
 function drawBall() {
     reflexCtx.beginPath();
     reflexCtx.arc(ball.x, ball.y, BALL_RADIUS, 0, Math.PI * 2);
-    reflexCtx.fillStyle = '#ef4444';
+    reflexCtx.fillStyle = '#ebeb1eff';
     reflexCtx.fill();
     reflexCtx.closePath();
 }
@@ -519,6 +704,18 @@ pauseButton.addEventListener('click', pauseGame);
 resumeButton.addEventListener('click', resumeGame);
 exitButton.addEventListener('click', exitGame);
 
+toggleViewButton.addEventListener('click', () => {
+    if (scoreboardView.classList.contains('hidden')) {
+        menuView.classList.add('hidden');
+        scoreboardView.classList.remove('hidden');
+        toggleViewButton.textContent = "Back to Menu";
+    } else {
+        scoreboardView.classList.add('hidden');
+        menuView.classList.remove('hidden');
+        toggleViewButton.textContent = "View Scoreboard";
+    }
+});
+
 
 window.addEventListener('resize', () => {
     flappyCanvas.width = flappyCanvas.offsetWidth;
@@ -533,5 +730,5 @@ window.onload = () => {
     flappyCanvas.height = flappyCanvas.offsetHeight;
     reflexCanvas.width = reflexCanvas.offsetWidth;
     reflexCanvas.height = reflexCanvas.offsetHeight;
-    loadAndDisplayHighScores();
+    initBallGame();
 };
