@@ -89,10 +89,41 @@
 /* Top and bottom black lines */
 .canvas-container:last-child canvas {
     position: relative;
-    border-top: 20px solid black;
-    border-bottom: 20px solid black;
+    border-top: 17px solid black;
+    border-bottom: 17px solid black;
+}
+.canvas-container:last-child {
+  position: relative; /* ensure pseudo-element is positioned relative to container */
 }
 
+.canvas-container:last-child {
+  position: relative;
+}
+
+.canvas-container:last-child::after {
+  content: "";
+  position: absolute;
+  left: 20px;       /* starts after the 20px left black border */
+  right: 20px;      /* ends before the 20px right black border */
+  bottom: 17px;     /* sits just above the 17px bottom black border */
+  height: 40px;     /* spike height */
+  pointer-events: none;          
+  z-index: 3;
+
+  /* Black spikes */
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'><polygon points='0,40 20,0 40,40' fill='black'/></svg>");
+  background-repeat: repeat-x;
+  background-size: 40px 40px;
+
+  /* Smooth up/down movement */
+  animation: spikeBounce 2s infinite ease-in-out;
+}
+
+@keyframes spikeBounce {
+  0%   { transform: translateY(0); }
+  50%  { transform: translateY(-10px); }
+  100% { transform: translateY(0); }
+}
 @media (max-width: 768px) {
     .canvas-container {
         padding-top: 100px !important;

@@ -33,12 +33,17 @@ let pauseStartTime = 0;
 // Flappy Bird Game Constants
 const BIRD_WIDTH = 40;
 const BIRD_HEIGHT = 30;
-const BIRD_GRAVITY = 0.3;
-const BIRD_JUMP = -6.0;
+const BIRD_GRAVITY = 0.6;
+const BIRD_JUMP = -10.0;
 const PIPE_WIDTH = 100;
 const PIPE_GAP = 250;
 const PIPE_SPEED = 3;
 const PARALLAX_SPEED = 2;
+
+let pipeSpeedMultiplier = 1;          // Start at normal speed
+const PIPE_SPEED_INCREMENT = 1.05;    // 5% increment
+const PIPE_SPEED_MAX = 2.5;           // Max 2.5×
+
 
 // Flappy Bird Game Variables
 let flappyBird = {
@@ -52,7 +57,7 @@ let pipes = [];
 const BALL_RADIUS = 25;
 const PADDLE_WIDTH = 150;
 const PADDLE_HEIGHT = 15;
-const BALL_SPEED = 5;
+const BALL_SPEED = 7;
 const BALL_SPEED_INCREMENT = 0.1;
 
 // Ball Game Variables
@@ -318,14 +323,16 @@ function updateFlappyBird() {
         bgElement.style.backgroundPositionX = `${bgPosition - PARALLAX_SPEED}px`;
     }
 
+    // Apply speed multiplier to pipe movement
     pipes.forEach(pipe => {
-        pipe.x -= PIPE_SPEED;
+        pipe.x -= PIPE_SPEED * pipeSpeedMultiplier;
     });
 
+    // Pipe generation
     if (
         pipes.length === 0 ||
         (
-            pipes[pipes.length - 1].x < flappyCanvas.width - (pipes[pipes.length - 1].nextSpacing || 500) && Math.random() < 0.5
+            pipes[pipes.length - 1].x < flappyCanvas.width - (pipes[pipes.length - 1].nextSpacing || 500) && Math.random() < 0.7
         )
     ) {
         const gap = PIPE_GAP;
@@ -347,6 +354,7 @@ function updateFlappyBird() {
 
     let collision = false;
     pipes.forEach(pipe => {
+        // Collision detection
         if (
             flappyBird.x + BIRD_WIDTH / 2 > pipe.x &&
             flappyBird.x - BIRD_WIDTH / 2 < pipe.x + PIPE_WIDTH &&
@@ -354,6 +362,8 @@ function updateFlappyBird() {
         ) {
             collision = true;
         }
+
+        // Passing pipe
         if (flappyBird.x > pipe.x + PIPE_WIDTH && !pipe.passed) {
             consecutivePipes++;
             const pipeScore = Math.min(100 + (consecutivePipes - 1) * 50, 300);
@@ -363,7 +373,10 @@ function updateFlappyBird() {
             pipe.passed = true;
             lastFlappyScore = performance.now();
             updateComboMultiplier();
-            
+
+            // 🔥 Increase pipe speed (up to max)
+            pipeSpeedMultiplier = Math.min(pipeSpeedMultiplier * PIPE_SPEED_INCREMENT, PIPE_SPEED_MAX);
+
             const rect = flappyCanvas.getBoundingClientRect();
             createFloatingText(
                 rect.left + flappyBird.x,
@@ -374,22 +387,25 @@ function updateFlappyBird() {
         }
     });
 
+    // Out of bounds
     if (flappyBird.y + BIRD_HEIGHT / 2 > flappyCanvas.height || flappyBird.y - BIRD_HEIGHT / 2 < 0) {
         collision = true;
     }
 
     if (collision) {
         consecutivePipes = 0;
+        pipeSpeedMultiplier = 1; // 🔄 Reset pipe speed
         applyScorePenalty();
         resetFlappyBird();
     }
 }
 
+
 function initBallGame() {
     ball.x = Math.random() * (reflexCanvas.width - BALL_RADIUS * 2) + BALL_RADIUS;
     ball.y = BALL_RADIUS * 2;
     paddle.x = reflexCanvas.width / 2 - PADDLE_WIDTH / 2;
-    paddle.y = reflexCanvas.height - 30;
+    paddle.y = reflexCanvas.height - 40;
 
     const angle = (Math.random() * 90 - 45) * Math.PI / 180;
     ball.dx = BALL_SPEED * Math.sin(angle) * ballSpeedMultiplier;
@@ -467,45 +483,76 @@ function drawPaddle() {
     reflexCtx.shadowOffsetY = 0;
 }
 
+mouseX = reflexCanvas.width / 2;
 
+reflexCanvas.addEventListener("mousemove", (e) => {
+    const rect = reflexCanvas.getBoundingClientRect();
+    mouseX = e.clientX - rect.left;
+});
+
+
+// Track pressed keys
+let keys = { left: false, right: false };
+
+// Listen for key events
+document.addEventListener("keydown", (e) => {
+    if (e.code === "ArrowLeft") keys.left = true;
+    if (e.code === "ArrowRight") keys.right = true;
+});
+
+document.addEventListener("keyup", (e) => {
+    if (e.code === "ArrowLeft") keys.left = false;
+    if (e.code === "ArrowRight") keys.right = false;
+});
+
+// Paddle movement speed
+const PADDLE_SPEED = 10;
 
 function updateBallGame() {
-    paddle.x = Math.max(0, Math.min(reflexCanvas.width - PADDLE_WIDTH, mouseX - PADDLE_WIDTH / 2));
+    // Update paddle position using mouse
+paddle.x = Math.max(
+    0,
+    Math.min(reflexCanvas.width - PADDLE_WIDTH, mouseX - PADDLE_WIDTH / 2)
+);
 
-    ball.x += ball.dx;
-    ball.y += ball.dy;
+// Ball movement
+ball.x += ball.dx;
+ball.y += ball.dy;
 
-    if (ball.y + BALL_RADIUS >= paddle.y && 
-        ball.y <= paddle.y + PADDLE_HEIGHT && 
-        ball.x > paddle.x && 
-        ball.x < paddle.x + PADDLE_WIDTH &&
-        ball.dy > 0) {
-    
-        ball.y = paddle.y - BALL_RADIUS;
+// Paddle collision
+if (ball.y + BALL_RADIUS >= paddle.y && 
+    ball.y <= paddle.y + PADDLE_HEIGHT && 
+    ball.x > paddle.x && 
+    ball.x < paddle.x + PADDLE_WIDTH &&
+    ball.dy > 0) {
 
-        const hitPos = (ball.x - paddle.x) / PADDLE_WIDTH;
-        const angle = (hitPos - 0.5) * Math.PI / 2;
+    ball.y = paddle.y - BALL_RADIUS;
 
-        ballSpeedMultiplier = Math.min(ballSpeedMultiplier + BALL_SPEED_INCREMENT, 5);
-        const currentSpeed = Math.sqrt(ball.dx * ball.dx + ball.dy * ball.dy);
-        const newSpeed = Math.min(currentSpeed * (ballSpeedMultiplier), 2 * BALL_SPEED);
+    const hitPos = (ball.x - paddle.x) / PADDLE_WIDTH;
+    const angle = (hitPos - 0.5) * Math.PI / 2;
 
-        ball.dx = newSpeed * Math.sin(angle);
-        ball.dy = -newSpeed * Math.cos(angle);
+    ballSpeedMultiplier = Math.min(ballSpeedMultiplier + BALL_SPEED_INCREMENT, 7);
+    const currentSpeed = Math.sqrt(ball.dx * ball.dx + ball.dy * ball.dy);
+    const newSpeed = Math.min(currentSpeed * ballSpeedMultiplier, 2 * BALL_SPEED);
 
-        ballScoreMultiplier += 0.2;
-        const finalScore = Math.floor(BASE_SCORE * ballScoreMultiplier);
-        score += finalScore;
+    ball.dx = newSpeed * Math.sin(angle);
+    ball.dy = -newSpeed * Math.cos(angle);
 
-        consecutiveMisses = 0;
-        createFloatingText(
-            reflexCanvas.offsetLeft + 50 * window.innerWidth / 100 + ball.x,
-            reflexCanvas.offsetTop + paddle.y - 20,
-            `+${finalScore} (x${ballScoreMultiplier.toFixed(1)})`,
-            ballScoreMultiplier >= 2 ? '#fbbf24' : '#4ade80'
-        );
-    }
+    ballScoreMultiplier += 0.2;
+    const finalScore = Math.floor(BASE_SCORE * ballScoreMultiplier);
+    score += finalScore;
 
+    consecutiveMisses = 0;
+    createFloatingText(
+        reflexCanvas.offsetLeft + 50 * window.innerWidth / 100 + ball.x,
+        reflexCanvas.offsetTop + paddle.y - 20,
+        `+${finalScore} (x${ballScoreMultiplier.toFixed(1)})`,
+        ballScoreMultiplier >= 2 ? '#fbbf24' : '#4ade80'
+    );
+}
+
+
+    // Wall collisions
     if (ball.x + BALL_RADIUS > reflexCanvas.width || ball.x - BALL_RADIUS < 0) {
         ball.dx = -ball.dx;
     }
@@ -513,6 +560,7 @@ function updateBallGame() {
         ball.dy = -ball.dy;
     }
 
+    // Ball misses bottom
     if (ball.y + BALL_RADIUS > reflexCanvas.height) {
         consecutiveMisses++;
         const missMultiplier = 1 + (consecutiveMisses - 1) * BALL_MISS_MULTIPLIER_INCREMENT;
@@ -530,6 +578,7 @@ function updateBallGame() {
         initBallGame();
     }
 }
+
 
 let lastTime = 0;
 let accumulatedTime = 0;
