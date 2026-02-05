@@ -1,116 +1,172 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QuickQual</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
-    <style>
-        @import url('');
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #14233f;
-            height: 100vh;
-            overflow: hidden;
-        }
-        .canvas-container {
-            width: 50vw;
-            height: 100vh;
-        }
-        canvas {
-            background-color: #e2e8f0;
-            cursor: pointer;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>QuickQual</title>
+
+  <!-- Tailwind -->
+  <link
+    href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"
+    rel="stylesheet"
+  />
+
+  <!-- App Styles -->
+  <link rel="stylesheet" href="style.css" />
+
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #14233f;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .canvas-container {
+      width: 50vw;
+      height: 100vh;
+    }
+
+    canvas {
+      background-color: #e2e8f0;
+      cursor: pointer;
+    }
+  </style>
 </head>
+
 <body class="flex flex-col h-screen">
-    <div class="flex-grow flex">
-        <!-- Flappy Bird Game Container -->
-        <div class="canvas-container flex-shrink-0 flex justify-center items-center p-4">
-            <canvas id="flappyCanvas" class="w-full h-full rounded-lg shadow-xl aspect-w-16 aspect-h-9 p-4"></canvas>
-        </div>
 
-        <!-- Reflex Time Game Container -->
-        <div class="canvas-container flex-shrink-0 flex justify-center items-center p-4">
-            <canvas id="reflexCanvas" class="w-full h-full rounded-lg shadow-xl aspect-w-16 aspect-h-9 p-4"></canvas>
-        </div>
-    </div>
-    
-    <!-- Game UI -->
-    <div class="fixed top-4 left-1/2 transform -translate-x-1/2 z-50">
-        <div class="bg-gray-800 bg-opacity-90 text-white rounded-full px-8 py-3 shadow-2xl flex items-center justify-between space-x-8">
-            <div id="timer" class="text-xl font-bold min-w-[120px]">Time Left: 2:00</div>
-            <div id="score" class="text-xl font-bold min-w-[120px]">Score: 0</div>
-            <button id="pauseButton" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-full transition duration-300 transform hover:scale-105 focus:outline-none">
-                Pause
-            </button>
-        </div>
+  <!-- ================= GAME AREA ================= -->
+  <div class="flex-grow flex">
+
+    <!-- Flappy Game -->
+    <div class="canvas-container flex justify-center items-center p-4">
+      <canvas
+        id="flappyCanvas"
+        class="w-full h-full rounded-lg shadow-xl"
+      ></canvas>
     </div>
 
-    <!-- Game Over/Menu Modal -->
-    <div id="gameOverModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-20 transition-opacity duration-300">
-        <div class="bg-white rounded-xl shadow-2xl p-8 max-w-sm w-full text-center transform scale-95 transition-transform duration-300">
-            <!-- Main Menu View -->
-            <div id="menuView">
-                <h2 id="modalTitle" class="text-3xl font-bold text-gray-800 mb-4">How to Play</h2>
-                <p id="finalScoreDisplay" class="text-lg text-gray-600 mb-6">
-                    Press the SPACEBAR to start and play Flappy Bird. Click the red box on the right to score points. Score on both games to win. Good luck!
-                </p>
-                <div id="nameInputContainer" class="hidden">
-                    <input type="text" id="playerNameInput" class="w-full px-4 py-2 mb-4 text-center border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter your name">
-                    <input type="tel" id="playerPhoneInput" class="w-full px-4 py-2 mb-4 text-center border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter your phone number (optional)">
-                </div>
-                <button id="restartButton" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-lg transition duration-300 transform hover:scale-105">
-                    Start Game
-                </button>
-            </div>
-<!--
-            
-            <div id="scoreboardView" class="hidden">
-                <h2 class="text-3xl font-bold text-gray-800 mb-4">High Scores</h2>
-                <div id="highScoresContainer" class="mt-6 mb-4">
-                    <ul id="highScoresList" class="text-gray-600">
-                        
-                    </ul>
-                </div>
-            </div>
-
-            
-            <button id="toggleViewButton" class="mt-4 w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-lg transition duration-300 transform hover:scale-105">
-                View Scoreboard
-            </button>
--->
-            <div class="mt-4 hidden" id="menuButtons">
-                <button id="resumeButton" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg mb-2 transition duration-300 transform hover:scale-105">
-                    Resume
-                </button>
-                <button id="exitButton" class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-6 rounded-lg transition duration-300 transform hover:scale-105">
-                    Exit
-                </button>
-            </div>
-        </div>
+    <!-- Reflex Game -->
+    <div class="canvas-container flex justify-center items-center p-4">
+      <canvas
+        id="reflexCanvas"
+        class="w-full h-full rounded-lg shadow-xl"
+      ></canvas>
     </div>
 
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
-<script>
-  // Your web app's Firebase configuration
-  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
-  const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_AUTH_DOMAIN",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_STORAGE_BUCKET",
-    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-    appId: "YOUR_APP_ID",
-    measurementId: "YOUR_MEASUREMENT_ID"
-  };
+  </div>
 
-  // Initialize Firebase
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.firestore();
-</script>
-<script src="script.js" type="module"></script>
+  <!-- ================= HUD ================= -->
+  <div
+    class="fixed top-4 left-1/2 transform -translate-x-1/2 z-50"
+  >
+    <div
+      class="bg-gray-800 bg-opacity-90 text-white rounded-full px-8 py-3 shadow-2xl flex items-center space-x-8"
+    >
+      <div id="timer" class="text-xl font-bold min-w-[120px]">
+        Time Left: 2:00
+      </div>
+
+      <div id="score" class="text-xl font-bold min-w-[120px]">
+        Score: 0
+      </div>
+
+      <button
+        id="pauseButton"
+        class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-full transition transform hover:scale-105 focus:outline-none"
+      >
+        Pause
+      </button>
+    </div>
+  </div>
+
+  <!-- ================= MODAL ================= -->
+  <div
+    id="modal"
+    class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-20 hidden"
+  >
+    <div
+      class="bg-white rounded-xl shadow-2xl p-8 max-w-sm w-full text-center"
+    >
+
+      <!-- TITLE -->
+      <h2
+        id="modalTitle"
+        class="text-3xl font-bold text-gray-800 mb-4"
+      >
+        QuickQual
+      </h2>
+
+      <!-- CONTENT -->
+      <p
+        id="modalText"
+        class="text-lg text-gray-600 mb-6"
+      >
+        Control both games simultaneously.  
+        Space to flap. Mouse to paddle.  
+        Survive for 2 minutes.  
+      </p>
+
+      <!-- NAME INPUT (GAME OVER) -->
+      <div id="nameInputContainer" class="hidden mb-4">
+        <input
+          id="playerNameInput"
+          type="text"
+          placeholder="Enter your name"
+          class="w-full px-4 py-2 mb-2 text-center border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
+
+      <!-- BUTTONS -->
+      <div class="space-y-3">
+
+        <button
+          id="startBtn"
+          class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 rounded-lg transition transform hover:scale-105"
+        >
+          Start Game
+        </button>
+
+        <button
+          id="resumeBtn"
+          class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 rounded-lg hidden"
+        >
+          Resume
+        </button>
+
+        <button
+          id="exitBtn"
+          class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3 rounded-lg hidden"
+        >
+          Exit
+        </button>
+
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ================= FIREBASE ================= -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_AUTH_DOMAIN",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_STORAGE_BUCKET",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    window.db = firebase.firestore();
+  </script>
+
+  <!-- ================= MAIN ENTRY ================= -->
+  <script type="module" src="./src/main.js"></script>
+
 </body>
 </html>

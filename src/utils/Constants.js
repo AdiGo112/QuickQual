@@ -1,0 +1,16 @@
+export const GAME_DURATION = 120000;
+
+export const FLAPPY = {
+  GRAVITY: 0.6,
+  JUMP: -10,
+  PIPE_SPEED: 3,
+  PIPE_GAP: 250,
+  PIPE_WIDTH: 100
+};
+
+export const REFLEX = {
+  BALL_RADIUS: 25,
+  BALL_SPEED: 7,
+  PADDLE_WIDTH: 150,
+  PADDLE_HEIGHT: 15
+};
