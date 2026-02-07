@@ -19,16 +19,29 @@ export class Pipes {
     // Spawn new pipes
     if (
       this.pipes.length === 0 ||
-      this.pipes[this.pipes.length - 1].x < this.canvas.width - FLAPPY.PIPE_SPACING
+      this.pipes[this.pipes.length - 1].x <
+        this.canvas.width - FLAPPY.PIPE_SPACING
     ) {
-      const minTop = 50;
-      const maxTop = this.canvas.height - FLAPPY.PIPE_GAP - 50;
+      // Random pipe width
+      const minWidth = 50;
+      const maxWidth = 150;
+      const width = Math.random() * (maxWidth - minWidth) + minWidth;
+
+      // Random gap size (optional but feels more natural)
+      const minGap = FLAPPY.PIPE_GAP * 0.8;
+      const maxGap = FLAPPY.PIPE_GAP * 1.2;
+      const gap = Math.random() * (maxGap - minGap) + minGap;
+
+      // Random top pipe height
+      const minTop = 40;
+      const maxTop = this.canvas.height - gap - 40;
       const top = Math.random() * (maxTop - minTop) + minTop;
-      
+
       this.pipes.push({
         x: this.canvas.width,
+        width,              // 👈 random width
         top,
-        bottom: top + FLAPPY.PIPE_GAP,
+        bottom: top + gap,  // 👈 random gap position/size
         passed: false
       });
     }

@@ -14,12 +14,14 @@ export class Ball {
     this.x = this.canvas.width / 2;
     this.y = 100;
 
-    // Random initial direction (60°–120°)
+    // Reset speed to base
+    this.speed = REFLEX.BALL_SPEED;
+
     const angle = (Math.random() * 60 + 60) * (Math.PI / 180);
     const dir = Math.random() > 0.5 ? 1 : -1;
 
-    this.dx = Math.cos(angle) * REFLEX.BALL_SPEED * dir;
-    this.dy = Math.sin(angle) * REFLEX.BALL_SPEED;
+    this.dx = Math.cos(angle) * this.speed * dir;
+    this.dy = Math.sin(angle) * this.speed;
 
     this.floatingTexts = [];
   }
@@ -28,7 +30,7 @@ export class Ball {
     this.x += this.dx;
     this.y += this.dy;
 
-    // Left / Right wall collision
+    // Side walls
     if (
       this.x - REFLEX.BALL_RADIUS < 0 ||
       this.x + REFLEX.BALL_RADIUS > this.canvas.width
@@ -40,7 +42,7 @@ export class Ball {
       );
     }
 
-    // Top wall collision
+    // Top wall
     if (this.y - REFLEX.BALL_RADIUS < 0) {
       this.dy *= -1;
       this.y = REFLEX.BALL_RADIUS;
@@ -56,30 +58,27 @@ export class Ball {
       this.x <= paddle.x + REFLEX.PADDLE_WIDTH &&
       this.dy > 0
     ) {
-      // Paddle center
+      // 🔥 Multiplicative acceleration with cap
+      this.speed = Math.min(
+        this.speed * (1 + REFLEX.BALL_ACCELERATION),
+        8
+      );
+
       const paddleCenter = paddle.x + REFLEX.PADDLE_WIDTH / 2;
+      const relative =
+        (this.x - paddleCenter) / (REFLEX.PADDLE_WIDTH / 2);
+      const clamped = Math.max(-1, Math.min(1, relative));
 
-      // Distance from center (-1 to +1)
-      const relativeIntersect =
-      (this.x - paddleCenter) / (REFLEX.PADDLE_WIDTH / 2);
-
-      // Clamp for safety
-      const clamped = Math.max(-1, Math.min(1, relativeIntersect));
-
-      // Max bounce angle (60° like Breakout / Pong)
       const maxAngle = (60 * Math.PI) / 180;
-
       const angle = clamped * maxAngle;
-      const speed = REFLEX.BALL_SPEED;
 
-      this.dx = Math.sin(angle) * speed;
-      this.dy = -Math.cos(angle) * speed;
+      this.dx = Math.sin(angle) * this.speed;
+      this.dy = -Math.cos(angle) * this.speed;
 
-      // Prevent sticking
       this.y = paddleY - REFLEX.BALL_RADIUS;
     }
 
-    // Ball fell below screen
+    // Miss
     if (this.y - REFLEX.BALL_RADIUS > this.canvas.height) {
       this.game.addScore(-100);
       this.floatingTexts.push(
@@ -91,10 +90,9 @@ export class Ball {
           "#F44336"
         )
       );
-      this.reset();
+      this.reset(); // speed resets here
     }
 
-    // Update floating texts
     this.floatingTexts = this.floatingTexts.filter(ft => ft.update());
   }
 
@@ -108,7 +106,6 @@ export class Ball {
     this.ctx.fill();
 
     this.ctx.shadowBlur = 0;
-
     this.floatingTexts.forEach(ft => ft.draw());
   }
 }
