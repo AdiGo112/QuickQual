@@ -1,103 +1,116 @@
-// Leaderboard service using localStorage for demo
-// Can be replaced with Firebase or other backend
+import {
+  collection,
+  addDoc,
+  getDocs,
+  query,
+  orderBy,
+  limit
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+import { db } from "./Firebase.js";
 
 export class Leaderboard {
   constructor(game) {
     this.game = game;
-    this.gameOverScreen = document.getElementById('gameOver');
+    this.gameOverScreen = document.getElementById("gameOver");
     this.setupEventListeners();
   }
 
   setupEventListeners() {
     // Submit score button
-    document.getElementById('submitScoreBtn').addEventListener('click', () => {
-      const nameInput = document.getElementById('playerName');
+    document.getElementById("submitScoreBtn").addEventListener("click", async () => {
+      const nameInput = document.getElementById("playerName");
       const name = nameInput.value.trim();
-      
-      if (name) {
-        this.saveScore(name, this.game.score);
-        nameInput.value = '';
-        this.hide();
-        this.showLeaderboard();
-      } else {
-        alert('Please enter your name!');
+
+      if (!name) {
+        alert("Please enter your name!");
+        return;
       }
+
+      await this.saveScore(name, this.game.score);
+      nameInput.value = "";
+      this.hide();
+      this.showLeaderboard();
     });
 
     // Play again button
-    document.getElementById('playAgainBtn').addEventListener('click', () => {
+    document.getElementById("playAgainBtn").addEventListener("click", () => {
       this.hide();
       this.game.start(performance.now());
     });
 
     // Menu button
-    document.getElementById('menuBtn').addEventListener('click', () => {
+    document.getElementById("menuBtn").addEventListener("click", () => {
       this.hide();
-      document.getElementById('game').classList.remove('active');
-      document.getElementById('menu').classList.add('active');
+      document.getElementById("game").classList.remove("active");
+      document.getElementById("menu").classList.add("active");
     });
   }
 
   show() {
-    document.getElementById('finalScore').textContent = this.game.score;
-    this.gameOverScreen.classList.add('active');
+    document.getElementById("finalScore").textContent = this.game.score;
+    this.gameOverScreen.classList.add("active");
   }
 
   hide() {
-    this.gameOverScreen.classList.remove('active');
+    this.gameOverScreen.classList.remove("active");
   }
 
   showLeaderboard() {
-    document.getElementById('leaderboard').classList.add('active');
+    document.getElementById("leaderboard").classList.add("active");
     this.load();
   }
 
-  saveScore(name, score) {
-    const scores = this.getScores();
-    scores.push({
+  // -------------------------
+  // Firebase replacements
+  // -------------------------
+
+  async saveScore(name, score) {
+    if (name.length > 20) return;
+    if (score < 0) return;
+
+    await addDoc(collection(db, "leaderboard"), {
       name,
       score,
       time: Date.now()
     });
-    
-    // Sort by score descending
-    scores.sort((a, b) => b.score - a.score);
-    
-    // Keep top 10
-    const topScores = scores.slice(0, 10);
-    
-    localStorage.setItem('quickqual_scores', JSON.stringify(topScores));
   }
 
-  getScores() {
-    const stored = localStorage.getItem('quickqual_scores');
-    return stored ? JSON.parse(stored) : [];
-  }
+  async load() {
+    const listElement = document.getElementById("leaderboardList");
+    listElement.innerHTML = '<p class="loading">Loading scores...</p>';
 
-  load() {
-    const scores = this.getScores();
-    const listElement = document.getElementById('leaderboardList');
-    
-    if (scores.length === 0) {
-      listElement.innerHTML = '<p class="loading">No scores yet. Be the first!</p>';
+    const q = query(
+      collection(db, "leaderboard"),
+      orderBy("score", "desc"),
+      limit(10)
+    );
+
+    const snapshot = await getDocs(q);
+
+    if (snapshot.empty) {
+      listElement.innerHTML =
+        '<p class="loading">No scores yet. Be the first!</p>';
       return;
     }
 
-    listElement.innerHTML = scores.map((score, index) => `
-      <div class="leaderboard-entry">
-        <span class="leaderboard-rank">#${index + 1}</span>
-        <span class="leaderboard-name">${this.escapeHtml(score.name)}</span>
-        <span class="leaderboard-score">${score.score}</span>
-      </div>
-    `).join('');
+    listElement.innerHTML = snapshot.docs
+      .map((doc, index) => {
+        const data = doc.data();
+        return `
+          <div class="leaderboard-entry">
+            <span class="leaderboard-rank">#${index + 1}</span>
+            <span class="leaderboard-name">${this.escapeHtml(data.name)}</span>
+            <span class="leaderboard-score">${data.score}</span>
+          </div>
+        `;
+      })
+      .join("");
   }
 
   escapeHtml(text) {
-    const div = document.createElement('div');
+    const div = document.createElement("div");
     div.textContent = text;
     return div.innerHTML;
   }
 }
-
-// Make leaderboard globally accessible
-window.leaderboard = null;

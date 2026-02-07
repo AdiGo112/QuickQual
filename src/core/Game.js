@@ -12,7 +12,6 @@ export class Game {
     this.countdown = 0;
     this.countdownStartTime = 0;
 
-
     this.flappy = new FlappyGame(this);
     this.reflex = new ReflexGame(this);
     this.timer = new Timer(GAME_DURATION);
