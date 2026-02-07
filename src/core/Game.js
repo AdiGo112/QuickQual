@@ -9,6 +9,9 @@ export class Game {
   constructor() {
     this.state = STATES.MENU;
     this.score = 0;
+    this.countdown = 0;
+    this.countdownStartTime = 0;
+
 
     this.flappy = new FlappyGame(this);
     this.reflex = new ReflexGame(this);
@@ -23,8 +26,10 @@ export class Game {
   start(now) {
     this.loop.stop();
     this.score = 0;
-    this.state = STATES.PLAYING;
-    this.timer.start(now);
+    // Initialize countdown
+    this.state = STATES.PAUSED; // freeze game logic
+    this.countdown = 3;
+    this.countdownStartTime = now;
     this.flappy.reset();
     this.reflex.reset();
     this.loop.start();
@@ -51,6 +56,21 @@ export class Game {
   }
 
   update(dt, now) {
+    // Handle 3-2-1 countdown
+    if (this.countdown > 0) {
+      const elapsed = now - this.countdownStartTime;
+      const remaining = 3 - Math.floor(elapsed / 1000);
+
+      this.countdown = remaining;
+
+      if (remaining <= 0) {
+        this.countdown = 0;
+        this.state = STATES.PLAYING;
+        this.timer.start(now);
+      }
+
+      return; // block game updates during countdown
+    }
     if (this.state !== STATES.PLAYING) return;
 
     this.timer.update(now);
@@ -68,7 +88,28 @@ export class Game {
   render() {
     this.flappy.render();
     this.reflex.render();
+    // Draw countdown overlay
+    if (this.countdown > 0) {
+      const canvases = [this.flappy.canvas, this.reflex.canvas];
+      const contexts = [this.flappy.ctx, this.reflex.ctx];
+
+      contexts.forEach((ctx, i) => {
+        const canvas = canvases[i];
+
+        ctx.save();
+        ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = "#fff";
+        ctx.font = "bold 96px sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(this.countdown, canvas.width / 2, canvas.height / 2);
+        ctx.restore();
+      });
+    }
   }
+
 
   addScore(value) {
     this.score = Math.max(0, this.score + value);
