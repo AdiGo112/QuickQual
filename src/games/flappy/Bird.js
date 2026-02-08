@@ -41,7 +41,7 @@ export class Bird {
 
   draw() {
     const ctx = this.ctx;
-    const pixelSize = 3;
+    const pixelSize = 2;
 
     const birdPixels = [
       "............BBBBBBBBBBBB..........",
