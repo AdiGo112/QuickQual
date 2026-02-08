@@ -4,7 +4,8 @@
   "description": "A dual-window reflex and coordination game combining Flappy Bird and Pong-style gameplay",
   "type": "module",
   "scripts": {
-    "dev": "node server.js",
+    "server": "node server.js",
+    "dev": "vite",
     "build": "vite build",
     "preview": "vite preview"
   },
@@ -22,7 +23,7 @@
     "cors": "^2.8.5",
     "express": "^4.18.2",
     "firebase": "^10.7.1",
-    "postgres": "^3.4.8"
+    "postgres": "^3.4.4"
   },
   "devDependencies": {
     "vite": "^5.0.0"

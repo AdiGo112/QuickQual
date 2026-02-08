@@ -8,6 +8,17 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
+// Test database connection
+async function testConnection() {
+  try {
+    const result = await sql`SELECT 1`;
+    console.log('✓ Database connected');
+  } catch (error) {
+    console.error('✗ Database connection failed:', error.message);
+    process.exit(1);
+  }
+}
+
 // Initialize database table
 async function initializeDatabase() {
   try {
@@ -19,9 +30,9 @@ async function initializeDatabase() {
         time BIGINT NOT NULL
       )
     `;
-    console.log('Database initialized');
+    console.log('✓ Database initialized');
   } catch (error) {
-    console.error('Database initialization error:', error);
+    console.error('✗ Database initialization error:', error.message);
   }
 }
 
@@ -68,8 +79,14 @@ app.get('/api/leaderboard', async (req, res) => {
   }
 });
 
-initializeDatabase();
+// Start server
+async function start() {
+  await testConnection();
+  await initializeDatabase();
 
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-});
+  app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+  });
+}
+
+start();
