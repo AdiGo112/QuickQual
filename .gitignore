@@ -1,2 +1,5 @@
 # Firebase secrets
 # src/config/firebaseConfig.js
+.env
+.env.*
+node_modules/

@@ -1,11 +1,12 @@
 {
-  "name": "QuickDual",
+  "name": "quickdual",
   "version": "1.0.0",
   "description": "A dual-window reflex and coordination game combining Flappy Bird and Pong-style gameplay",
-  "main": "src/main.js",
+  "type": "module",
   "scripts": {
-    "start": "npx serve",
-    "dev": "npx serve"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
   },
   "keywords": [
     "game",
@@ -17,5 +18,10 @@
   ],
   "author": "",
   "license": "MIT",
-  "type": "module"
+  "dependencies": {
+    "firebase": "^10.7.1"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0"
+  }
 }
