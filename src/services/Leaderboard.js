@@ -93,7 +93,8 @@ export class Leaderboard {
         .join("");
     } catch (error) {
       console.error('Error loading leaderboard:', error);
-      listElement.innerHTML = '<p class="loading">Error loading scores.</p>';
+      const msg = this.escapeHtml(error && (error.message || String(error)) || 'Unknown error');
+      listElement.innerHTML = `<p class="loading">Error loading scores: ${msg}</p>`;
     }
   }
 
